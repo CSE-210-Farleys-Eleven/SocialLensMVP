@@ -10,11 +10,15 @@
     "test": "vitest run",
     "coverage": "vitest run --coverage",
     "check": "tsc --noEmit && node scripts/check-boundaries.mjs && vitest run",
-    "smoke": "tsx scripts/live-smoke.ts"
+    "smoke": "tsx scripts/live-smoke.ts",
+    "build:browser": "node scripts/build-browser-bundle.mjs",
+    "test:browser": "node scripts/build-browser-bundle.mjs && playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@types/node": "^22.0.0",
     "@vitest/coverage-v8": "^4.1.12",
+    "esbuild": "^0.28.2",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "vitest": "^4.1.12"

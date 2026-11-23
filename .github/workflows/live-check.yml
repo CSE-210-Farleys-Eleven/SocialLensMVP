@@ -1,0 +1,19 @@
+name: live-check
+# Real-network checks from a browser origin (CORS, real servers). Not a required check:
+# public servers can be flaky, so this runs weekly and on demand instead of on every PR.
+on:
+  schedule: [{ cron: "0 10 * * 1" }]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+        env: { LIVE: "1" }
