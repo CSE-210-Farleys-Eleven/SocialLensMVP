@@ -42,5 +42,6 @@ SocialLens reads a person's public AT Protocol (Bluesky) data in the browser and
 npm install
 npm run check     # typecheck + boundaries + tests
 npm test          # tests only
+npm run test:browser  # Chromium tests of the adapters (offline); LIVE=1 adds real-network CORS checks
 npm run smoke     # optional live read-only check against @bsky.app (adapters)
 ```

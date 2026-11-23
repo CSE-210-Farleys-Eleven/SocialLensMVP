@@ -6,3 +6,6 @@ coverage/
 credentials*.json
 *.log
 smoke-output*
+.browser-build/
+test-results/
+playwright-report/
