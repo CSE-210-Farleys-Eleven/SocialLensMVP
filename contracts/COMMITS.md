@@ -16,6 +16,8 @@
 * **body**: explain *why*, not a line-by-line of the diff. Mention anything you decided that a reader would not guess, and anything left unverified.
 * **evidence line** (for `feat` and `fix`): what you ran and what it showed, e.g. `Test evidence: npm run check -> 120 passed`. If you did not run something, say "not verified".
 
+**Breaking changes** (they drive the major version, see [RELEASES.md](RELEASES.md)): add `!` after the scope and explain in the body, e.g. `feat(adapters)!: rename AdapterResult.items to records`, with a `BREAKING CHANGE: <what consumers must change>` line.
+
 Examples:
 
 ```
