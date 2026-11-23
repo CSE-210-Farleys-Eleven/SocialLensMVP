@@ -16,7 +16,7 @@
 
 The PR title becomes the squashed commit message, so it follows the commit format and CI checks it:
 
-`<type>(<module>): <summary>`
+`<type>(<module>): <summary>` (add `!` after the scope for a breaking change)
 
 ## Size and scope
 
