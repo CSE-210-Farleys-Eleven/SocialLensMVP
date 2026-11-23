@@ -63,7 +63,7 @@ preferred over a raw token, because DPoP-bound tokens can't be replayed as a bea
 * `coverage[].complete === true` means we know we reached the end. Otherwise `reason` is
   `record-cap | error | aborted | not-indexed`. **Label numbers from incomplete collections as partial.**
 * A collection that exists in the request but not in the repo is `fetched: 0, complete: true` (a real zero).
-* `engagement` counts are the AppView's view at `fetchedAt`; they exclude posts it has not indexed.
+* `engagement` counts are the AppView's view at `fetchedAt`; they exclude posts it has not indexed. The `engagement` coverage entry is relative to the post records in `items` (or, if none could be read, to the author feed). It is only emitted when `app.bsky.feed.post` was requested (or `collections` omitted). Never read `fetched: 0, complete: false` as zero.
 * `result.complete` is true iff there is no `error` issue and every coverage entry is complete.
 * The whole result is plain JSON (safe for postMessage / Worker).
 * Issue messages are user-safe: no tokens, no full URLs.
@@ -80,7 +80,7 @@ not-indexed, aborted, adapter-crashed`
 |---|---|---|
 | `atproto` | plc.directory, did:web hosts, the user's PDS | handle→DID, DID doc, PDS address (validated: public https only), PLC history, `describeRepo`, paged `listRecords` (100/page); only accepts records provably in this DID's repo and this collection |
 | `bluesky` | public AppView (`public.api.bsky.app`) | `getProfile` counters; `getPosts` in batches of 25 for the post URIs atproto found; falls back to `getAuthorFeed` if there are no upstream records. No credentials ever sent. |
-| `fixtures` | nothing | deterministic synthetic account, scenarios `typical, empty, appview-down, rate-limited, pds-down`. Items say `source: 'fixtures'`. |
+| `fixtures` | nothing real | the deterministic synthetic account, served through the real atproto and bluesky adapters over a fake network, so it matches live behaviour (coverage, issues, degradation) by construction. Scenarios `typical, empty, appview-down, rate-limited, pds-down`. Items say `source: 'fixtures'`; issue messages start with `[synthetic]`. |
 
 ## Swapping live and fixtures
 

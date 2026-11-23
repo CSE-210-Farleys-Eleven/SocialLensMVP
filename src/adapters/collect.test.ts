@@ -106,6 +106,30 @@ describe('collect (live pipeline over fake network)', () => {
   });
 });
 
+describe('collect (honest zeros vs unknowns)', () => {
+  it('post records unreadable but other collections fine: engagement is NOT reported as a complete zero', async () => {
+    const fx = createFixtureFetch();
+    const f = (async (u: RequestInfo | URL, init?: RequestInit) => {
+      if (String(u).includes('collection=app.bsky.feed.post')) return new Response('{}', { status: 400 });
+      return fx.fetch(u, init);
+    }) as typeof fetch;
+    const r = await collect({ subject: { did: FIXTURE_DID } }, { context: { fetch: f, sleep: async () => {} } });
+    expect(r.items.some((i) => i.kind === 'record' && i.collection === 'app.bsky.feed.post')).toBe(false);
+    expect(r.coverage.find((c) => c.collection === 'app.bsky.feed.post')).toMatchObject({ complete: false, reason: 'error' });
+    // Counts still arrive via the feed fallback, and nothing claims a known zero.
+    const e = r.coverage.find((c) => c.collection === 'engagement')!;
+    expect(!(e.fetched === 0 && e.complete)).toBe(true);
+    expect(r.complete).toBe(false);
+  });
+
+  it('posts not requested: no engagement items and no engagement coverage', async () => {
+    const { ctx } = live();
+    const r = await collect({ subject: { did: FIXTURE_DID }, collections: ['app.bsky.graph.block'] }, { context: ctx });
+    expect(r.items.some((i) => i.kind === 'engagement')).toBe(false);
+    expect(r.coverage.some((c) => c.collection === 'engagement')).toBe(false);
+  });
+});
+
 describe('collect (isolation between adapters)', () => {
   const ok: Adapter = {
     id: 'fixtures',
@@ -164,6 +188,39 @@ describe('fixtures pipeline', () => {
     expect(Array.isArray(r.items) && Array.isArray(r.issues) && Array.isArray(r.coverage)).toBe(true);
     if (s === 'typical' || s === 'empty') expect(r.complete).toBe(true);
     else expect(r.complete).toBe(false);
+  });
+
+  // Fixtures must be a drop-in for live: same shape of result in every scenario and request.
+  const summary = (r: AdapterResult) => ({
+    kinds: kinds(r),
+    coverage: r.coverage.map((c) => [c.collection, c.fetched, c.complete, c.reason ?? null].join('|')).sort(),
+    issueCodes: r.issues.map((i) => i.code).sort(),
+    complete: r.complete,
+  });
+  const requests = [
+    { subject: { did: FIXTURE_DID } },
+    { subject: { did: FIXTURE_DID }, collections: ['app.bsky.graph.block'] },
+    { subject: { did: FIXTURE_DID }, collections: ['app.bsky.feed.post', 'com.example.absent'] },
+    { subject: { did: FIXTURE_DID }, options: { maxRecordsPerCollection: 7 } },
+    { subject: { did: FIXTURE_DID }, options: { includeEngagement: false } },
+  ];
+  for (const scenario of FIXTURE_SCENARIOS) {
+    it.each(requests.map((q, i) => [i, q] as const))(`parity with live, scenario ${scenario}, request #%i`, async (_i, q) => {
+      const f = await collect(q, { pipeline: createFixturePipeline(scenario), context: { sleep: async () => {} } });
+      const l = await collect(q, { pipeline: createLivePipeline(), context: { fetch: createFixtureFetch(scenario).fetch, sleep: async () => {} } });
+      expect(summary(f)).toEqual(summary(l));
+    });
+  }
+
+  it('a requested collection absent from the repo is an honest zero in fixtures too', async () => {
+    const r = await collect({ subject: { did: FIXTURE_DID }, collections: ['com.example.absent'] }, { pipeline: createFixturePipeline() });
+    expect(r.coverage).toContainEqual({ source: 'fixtures', collection: 'com.example.absent', fetched: 0, complete: true });
+  });
+
+  it('never forwards a real session into the fake network', async () => {
+    const r = await collect({ subject: { did: FIXTURE_DID }, session: { did: 'did:plc:someoneelseaaaaaaaaaaaa', accessToken: 'SECRET' } }, { pipeline: createFixturePipeline() });
+    expect(JSON.stringify(r)).not.toContain('SECRET');
+    expect(r.issues.some((i) => i.code === 'session-mismatch')).toBe(false);
   });
 
   it('is deterministic', async () => {

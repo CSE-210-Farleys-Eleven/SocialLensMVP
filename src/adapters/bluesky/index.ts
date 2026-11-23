@@ -166,9 +166,10 @@ async function readCountsFromFeed(ctx: AdapterContext, did: string, cap: number)
 
 /**
  * Bluesky adapter: public counters from the Bluesky AppView. No sign-in and
- * no session credentials are ever sent here. Works with or without upstream
- * atproto records: with them it looks up exactly those posts; without them it
- * reads the account's own author feed.
+ * no session credentials are ever sent here. With upstream post records it
+ * looks up exactly those posts; if posts were requested but none are upstream
+ * it reads the account's own author feed. If posts were not requested it
+ * returns profile counters only.
  */
 export function createBlueskyAdapter(): Adapter {
   return {
@@ -192,14 +193,13 @@ export function createBlueskyAdapter(): Adapter {
       if (!resolvedDid) return out;
 
       const cap = Math.max(1, Math.floor(req.options?.maxRecordsPerCollection ?? DEFAULT_MAX_POSTS));
-      const upstreamHasRecords = upstream.some((i) => i.kind === 'record');
+      // Engagement is only meaningful for posts that were asked for.
+      const postsWanted = !req.collections || req.collections.includes(POST_COLLECTION);
+      if (!postsWanted) return out;
 
-      if (upstreamHasRecords) {
-        const uris = [...new Set(upstream.flatMap((i) => (i.kind === 'record' && i.collection === POST_COLLECTION ? [i.uri] : [])))];
-        if (uris.length === 0) {
-          out.coverage.push({ source: SRC, collection: 'engagement', fetched: 0, complete: true });
-          return out;
-        }
+      const uris = [...new Set(upstream.flatMap((i) => (i.kind === 'record' && i.collection === POST_COLLECTION ? [i.uri] : [])))];
+
+      if (uris.length > 0) {
         const r = await readCountsForUris(ctx, uris);
         out.items.push(...r.found);
         out.issues.push(...r.issues);
@@ -218,6 +218,9 @@ export function createBlueskyAdapter(): Adapter {
           ...(complete ? {} : { reason: r.failed > 0 ? ('error' as const) : ('not-indexed' as const) }),
         });
       } else {
+        // Posts were wanted but none arrived upstream (no atproto stage, or its read
+        // failed, or the account has none). Ask the AppView directly instead of
+        // claiming a known zero.
         const r = await readCountsFromFeed(ctx, resolvedDid, cap);
         out.items.push(...r.items);
         out.issues.push(...r.issues);
