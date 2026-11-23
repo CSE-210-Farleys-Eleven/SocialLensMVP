@@ -1,19 +1,35 @@
 # SocialLensMVP
 
-SocialLens (CSE 210, Group 11): a browser-first, self-only AT Protocol analytics and privacy dashboard.
-Organised by module (`src/<module>`); module contracts live in `transition/`.
+SocialLens (CSE 210, Group 11): a browser-first dashboard that reads a person's public AT Protocol (Bluesky) data and shows activity, engagement and privacy-relevant observations.
 
-**Implemented here: `src/adapters`** (AT Protocol, Bluesky, fixtures). The other modules are stubs naming
-their owners and expected inputs/outputs from the team doc.
+## How it works
+
+Data flows one way through independent modules in `src/`:
+
+```
+auth ──► accounts / registry ──► adapters ──► normalize ──► analytics ──► ui
+```
+
+| Module | Role |
+|---|---|
+| `auth` | Sign-in and sessions |
+| `accounts`, `registry` | Linked accounts (by DID); which apps and collections are supported |
+| `adapters` | Read the network: AT Protocol repo and identity, Bluesky engagement counts, offline fixtures |
+| `normalize` | App-specific records to one shared model |
+| `analytics` | Activity and engagement calculations |
+| `ui` | Views and components |
+| `shared` | Types, errors, helpers, config |
+
+Modules talk only through the contracts in [`transition/`](transition/README.md). Currently implemented: `adapters`.
+
+## Run
 
 ```
 npm install
-npm run check      # tsc + vitest (no network)
+npm run check      # type check, module-boundary check, tests (no network)
 npm run smoke      # optional: live read-only read of the public @bsky.app account
 ```
 
-* Contract: [transition/adapters/README.md](transition/adapters/README.md)
-* Types: [src/adapters/contract.ts](src/adapters/contract.ts)
-* No runtime dependencies; uses the platform `fetch`. Runs in the browser and Node 20+.
+## Contributing
 
-Privacy stance: adapters are read-only, send credentials only to the account's own PDS, and store nothing.
+See [`contracts/`](contracts/README.md) for pull request and commit rules, and [`AGENTS.md`](AGENTS.md) if you are running a coding agent here.
