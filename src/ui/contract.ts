@@ -116,8 +116,12 @@ export interface ChartWidget {
   labelHeader: string;
   /** One entry per stacked series, in drawing order. */
   series: { id: string; label: string }[];
-  /** Contiguous, in axis order; `values[i]` belongs to `series[i]`. */
-  points: { key: string; label: string; values: number[] }[];
+  /**
+   * Contiguous, in axis order; `values[i]` belongs to `series[i]`. `null` means unknown (e.g. a day
+   * with no posts read during an incomplete read): draw no bar and print "Unknown" in the table,
+   * never 0.
+   */
+  points: { key: string; label: string; values: (number | null)[] }[];
   /** Indices into `points` that get an axis label (thinned by core). */
   axisLabelIndices: number[];
   status: MetricStatus;

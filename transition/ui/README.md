@@ -80,7 +80,7 @@ Test_Module = `CSE-210-Farleys-Eleven/Test_Module_SocialLens` at commit `2b2e993
 | `kind` | Shows | Renderer must |
 |---|---|---|
 | `metric` | One number with its honesty label | Print `valueText` and `statusText` as given. Show the definition from `lookupMetric(id)` |
-| `chart` | Stacked bars over UTC days, hours or weekdays | Draw bars **and** offer the same `points` as a data table. Label only `axisLabelIndices`. Show `emptyText` when there's nothing to draw |
+| `chart` | Stacked bars over UTC days, hours or weekdays | Draw bars **and** offer the same `points` as a data table. A `null` value is unknown: draw no bar and print "Unknown" in the table, never 0. Label only `axisLabelIndices`. Show `emptyText` when there's nothing to draw |
 | `table` | Rows of cells | Render cells as text. Link only when `href` is set (core sets it only for https) |
 | `facts` | Label/value pairs, e.g. the identity card | Same cell rules as `table` |
 | `note` | A sentence. `sample-data` tone marks temporary content | Make `sample-data` notes visually distinct |
