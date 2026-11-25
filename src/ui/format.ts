@@ -28,6 +28,11 @@ function fixed(n: number, decimals: 0 | 1): string {
   return sign + group(int) + (frac === undefined ? '' : `.${frac}`);
 }
 
+/** "1,234": a known count inside a sentence. */
+export function formatCount(n: number): string {
+  return fixed(n, 0);
+}
+
 /**
  * "12", "1,234", "At least 12", "3.5", "67%", "Unknown", "Not available".
  * A missing or non-finite value prints "Unknown", never 0 or NaN.

@@ -14,6 +14,11 @@ export interface MetricSpec {
   detail?: string | null;
   /** Overrides the glossary label. */
   label?: string;
+  /**
+   * Text for a complete value that has nothing to compute (e.g. "No posts" for an average over
+   * zero posts). Without it, a complete null value is treated as unknown.
+   */
+  nothingToComputeText?: string;
 }
 
 /**
@@ -22,6 +27,20 @@ export interface MetricSpec {
  * not-available value carries no number.
  */
 export function buildMetric(spec: MetricSpec): MetricValue {
+  if (spec.status === 'complete' && spec.value === null && spec.nothingToComputeText) {
+    return {
+      id: spec.id,
+      label: spec.label ?? lookupMetric(spec.id)?.label ?? spec.id,
+      value: null,
+      status: 'complete',
+      isLowerBound: false,
+      format: spec.format,
+      valueText: spec.nothingToComputeText,
+      statusText: '',
+      reason: null,
+      detail: spec.detail ?? null,
+    };
+  }
   const usable = spec.value !== null && Number.isFinite(spec.value);
   const status: MetricStatus =
     spec.status === 'not-available' ? 'not-available' : usable ? spec.status : 'unknown';
