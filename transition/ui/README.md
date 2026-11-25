@@ -92,6 +92,7 @@ Test_Module = `CSE-210-Farleys-Eleven/Test_Module_SocialLens` at commit `2b2e993
 | `status` | `valueText` | `statusText` | Meaning |
 |---|---|---|---|
 | `complete` | `"12"`; `"0"` | `""`; `"Observed zero"` | Fully observed. A 0 is a real zero |
+| `complete`, `value: null` | `"No posts"` | `""` | Fully observed, nothing to compute (e.g. an average over zero posts). Not unknown, not 0 |
 | `partial` | `"At least 12"` when `isLowerBound`, else `"3.4"` | `"Partial"` | Some data wasn't read. `reason` says what |
 | `unknown` | `"Unknown"` | `"Unknown"` | Nothing trustworthy was observed. Never shown as 0 |
 | `not-available` | `"Not available"` | `"Not available on this app"` | No supported app can supply it |

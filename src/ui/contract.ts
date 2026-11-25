@@ -80,13 +80,17 @@ export interface MetricValue {
   /** Glossary key, e.g. 'activity.posts', 'engagement.likes.average'. */
   id: string;
   label: string;
-  /** Raw number for charts and sorting; null iff status is 'unknown' or 'not-available'. */
+  /**
+   * Raw number for charts and sorting. null when status is 'unknown' or 'not-available', or when
+   * status is 'complete' but there was nothing to compute (an average over zero posts):
+   * `valueText` then says why, e.g. "No posts".
+   */
   value: number | null;
   status: MetricStatus;
   /** True only for a partial count that can only grow: printed "At least N". */
   isLowerBound: boolean;
   format: MetricFormat;
-  /** Ready to print: "1,234", "At least 12", "3.5", "67%", "Unknown", "Not available". */
+  /** Ready to print: "1,234", "At least 12", "3.5", "67%", "Unknown", "Not available", "No posts". */
   valueText: string;
   /** Ready to print next to the value: "", "Observed zero", "Partial", "Unknown", "Not available on this app". */
   statusText: string;
