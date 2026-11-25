@@ -1,5 +1,5 @@
 import type { ChartWidget, MetricStatus, Section, Widget } from '../contract';
-import { statusTextFor } from '../format';
+import { formatCount, statusTextFor } from '../format';
 import { lookupMetric } from '../glossary';
 import type { TemporaryAnalyticsResult } from '../temporary/analytics-pr20';
 import { coverageReason } from './metric';
@@ -9,6 +9,8 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_LABELLED = 12;
 
 const GAP_NOTE = 'Only dated posts that were read are shown; a gap is not proof of inactivity.';
+const PARTIAL_GAP_NOTE =
+  'The read was incomplete, so days with no posts read are shown as unknown, not zero. Counts on other days may be incomplete too.';
 
 /** Milliseconds at 00:00 UTC for a valid YYYY-MM-DD, else null. */
 function dayMs(date: string): number | null {
@@ -25,11 +27,18 @@ export function axisLabelIndices(count: number): number[] {
   return [0, Math.floor((count - 1) / 2), count - 1];
 }
 
+/** Days shown at most; older posts are counted in a note instead of drawn. */
+export const TIMELINE_MAX_DAYS = 365;
+
+const plural = (n: number, one: string, many: string) => (n === 1 ? `1 ${one}` : `${formatCount(n)} ${many}`);
+
 /**
- * Posts per UTC day (PR #20 `activity.byUtcDay`), filled with zero days from the first post day to
- * the later of the fetchedAt day and the last post day, so bars are evenly spaced in time.
+ * Posts per UTC day (PR #20 `activity.byUtcDay`), one point per day so bars are evenly spaced in
+ * time. The range ends at the fetchedAt day and spans at most `maxDays`, starting no earlier than
+ * the first post day. Days without posts are 0 after a complete read and unknown (null) after a
+ * partial one. Posts outside the range are counted in a note, never drawn.
  */
-export function timelineSection(analytics: TemporaryAnalyticsResult | null): Section {
+export function timelineSection(analytics: TemporaryAnalyticsResult | null, maxDays = TIMELINE_MAX_DAYS): Section {
   const a = analytics?.activity;
   const status: MetricStatus = !a || a.status === 'unknown' || a.postCount === null ? 'unknown' : a.status;
 
@@ -42,14 +51,31 @@ export function timelineSection(analytics: TemporaryAnalyticsResult | null): Sec
   }
 
   const points: ChartWidget['points'] = [];
+  const left = { earlierPosts: 0, earlierDays: 0, laterPosts: 0 };
+  let capped: { start: number; end: number } | null = null;
   if (counts.size > 0) {
-    const first = Math.min(...counts.keys());
-    const lastPost = Math.max(...counts.keys());
+    let firstPost = Infinity;
+    let lastPost = -Infinity;
+    for (const ms of counts.keys()) {
+      firstPost = Math.min(firstPost, ms);
+      lastPost = Math.max(lastPost, ms);
+    }
     const fetchedDay = analytics ? dayMs(analytics.fetchedAt.slice(0, 10)) : null;
-    const last = fetchedDay !== null && fetchedDay > lastPost ? fetchedDay : lastPost;
-    for (let ms = first; ms <= last; ms += DAY_MS) {
+    const end = fetchedDay ?? lastPost;
+    const earliestAllowed = end - (Math.max(1, Math.floor(maxDays)) - 1) * DAY_MS;
+    const start = Math.max(firstPost, earliestAllowed);
+    if (firstPost < earliestAllowed) capped = { start, end };
+    for (const [ms, n] of counts) {
+      if (ms > end) left.laterPosts += n;
+      else if (ms < start) {
+        left.earlierPosts += n;
+        left.earlierDays += 1;
+      }
+    }
+    const gap = status === 'partial' ? null : 0;
+    for (let ms = start; ms <= end; ms += DAY_MS) {
       const key = isoDay(ms);
-      points.push({ key, label: key, values: [counts.get(ms) ?? 0] });
+      points.push({ key, label: key, values: [counts.get(ms) ?? gap] });
     }
   }
 
@@ -75,9 +101,25 @@ export function timelineSection(analytics: TemporaryAnalyticsResult | null): Sec
   };
 
   const widgets: Widget[] = [chart];
-  if (points.length > 0) widgets.push({ kind: 'note', tone: 'info', text: GAP_NOTE });
+  if (points.length > 0) widgets.push({ kind: 'note', tone: 'info', text: status === 'partial' ? PARTIAL_GAP_NOTE : GAP_NOTE });
   if (status === 'partial' && analytics) {
     widgets.push({ kind: 'note', tone: 'warning', text: coverageReason(analytics.coverage.posts, 'posts') });
+  }
+  if (capped) {
+    const range = `${isoDay(capped.start)} to ${isoDay(capped.end)}, UTC`;
+    const what = `${plural(left.earlierPosts, 'earlier post', 'earlier posts')} on ${plural(left.earlierDays, 'day', 'days')}`;
+    widgets.push({
+      kind: 'note',
+      tone: 'info',
+      text: `Showing the last ${formatCount(points.length)} days (${range}). ${what} ${left.earlierPosts === 1 ? 'is' : 'are'} not shown.`,
+    });
+  }
+  if (left.laterPosts > 0) {
+    widgets.push({
+      kind: 'note',
+      tone: 'warning',
+      text: `${plural(left.laterPosts, 'post is', 'posts are')} dated after the time of reading and ${left.laterPosts === 1 ? 'is' : 'are'} not shown.`,
+    });
   }
   const undated = a && status !== 'unknown' ? a.undatedPosts : 0;
   if (undated > 0) {

@@ -36,10 +36,47 @@ describe('timelineSection', () => {
     expect(chart.points.map((p) => p.key)).toEqual(['2025-12-31', '2026-01-01', '2026-01-02']);
   });
 
-  it('extends to the last post day if it is after fetchedAt', () => {
-    const a = withDays([{ date: '2026-11-11', postCount: 1 }]);
-    const chart = chartOf(timelineSection(a));
-    expect(chart.points.at(-1)?.key).toBe('2026-11-11');
+  it('leaves out posts dated after the time of reading, and says so', () => {
+    const s = timelineSection(withDays([{ date: '2026-11-09', postCount: 1 }, { date: '9999-12-31', postCount: 2 }]));
+    expect(chartOf(s).points.map((p) => p.key)).toEqual(['2026-11-09', '2026-11-10']);
+    expect(notes(s).join(' ')).toContain('2 posts are dated after the time of reading and are not shown.');
+  });
+
+  it('partial read: days with no posts read are unknown (null), never 0; read days keep their counts', () => {
+    const a = withDays([{ date: '2026-11-06', postCount: 2 }, { date: '2026-11-08', postCount: 1 }], { status: 'partial' });
+    const s = timelineSection(a);
+    expect(chartOf(s).points.map((p) => p.values)).toEqual([[2], [null], [1], [null], [null]]);
+    expect(notes(s).join(' ')).toMatch(/shown as unknown, not zero/);
+    expect(notes(s).join(' ')).not.toMatch(/gap is not proof/);
+  });
+
+  it('complete read: gap days are observed zeros', () => {
+    const chart = chartOf(timelineSection(withDays([{ date: '2026-11-08', postCount: 1 }])));
+    expect(chart.points.every((p) => p.values.every((v) => v !== null))).toBe(true);
+  });
+
+  it('caps the range to the last 365 days and labels what was left out', () => {
+    const s = timelineSection(withDays([{ date: '2019-01-01', postCount: 1 }, { date: '2026-11-09', postCount: 4 }]));
+    const chart = chartOf(s);
+    expect(chart.points).toHaveLength(365);
+    expect(chart.points[0]!.key).toBe('2025-11-11');
+    expect(chart.points.at(-1)!.key).toBe('2026-11-10');
+    expect(notes(s).join(' ')).toContain(
+      'Showing the last 365 days (2025-11-11 to 2026-11-10, UTC). 1 earlier post on 1 day is not shown.',
+    );
+  });
+
+  it('the cap is configurable and counts every left-out post and day', () => {
+    const s = timelineSection(
+      withDays([{ date: '2026-11-01', postCount: 2 }, { date: '2026-11-02', postCount: 3 }, { date: '2026-11-09', postCount: 1 }]),
+      7,
+    );
+    expect(chartOf(s).points.map((p) => p.key)[0]).toBe('2026-11-04');
+    expect(notes(s).join(' ')).toContain('5 earlier posts on 2 days are not shown.');
+  });
+
+  it('a short range is not labelled as capped', () => {
+    expect(notes(timelineSection(sample('complete'))).join(' ')).not.toMatch(/Showing the last/);
   });
 
   it('bar values sum to the dated post count, so the data table matches the bars', () => {
