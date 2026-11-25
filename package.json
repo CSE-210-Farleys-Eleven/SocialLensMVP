@@ -25,5 +25,9 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@atcute/identity-resolver": "^2.0.3",
+    "@atcute/oauth-browser-client": "^5.1.0"
   }
 }
