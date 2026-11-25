@@ -1,7 +1,7 @@
 // Registry: which apps we know about, and how to group a repo's collections by app.
 // Pure code, no network, no URLs.
 
-import type { AppEntry, KnownApp } from "./types.ts";
+import type { AppEntry, KnownApp } from "./contract";
 
 // Collection prefixes for apps we recognize. Verify each prefix in pdsls.dev
 // before relying on it. Only `supported: true` apps are requested from the adapters.
