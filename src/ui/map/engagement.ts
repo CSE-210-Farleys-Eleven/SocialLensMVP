@@ -8,11 +8,11 @@ import type {
 } from '../temporary/analytics-pr20';
 import { coverageReason, metricWidget } from './metric';
 
-const KINDS: { key: TemporaryEngagementKey; id: string; noun: string }[] = [
-  { key: 'likeCount', id: 'likes', noun: 'likes' },
-  { key: 'repostCount', id: 'reposts', noun: 'reposts' },
-  { key: 'replyCount', id: 'replies', noun: 'replies' },
-  { key: 'quoteCount', id: 'quotes', noun: 'quotes' },
+const KINDS: { key: TemporaryEngagementKey; id: string; noun: string; counter: string }[] = [
+  { key: 'likeCount', id: 'likes', noun: 'likes', counter: 'like count' },
+  { key: 'repostCount', id: 'reposts', noun: 'reposts', counter: 'repost count' },
+  { key: 'replyCount', id: 'replies', noun: 'replies', counter: 'reply count' },
+  { key: 'quoteCount', id: 'quotes', noun: 'quotes', counter: 'quote count' },
 ];
 
 const NO_ANALYSIS = 'Interaction counts could not be calculated: the analysis did not run or failed.';
@@ -37,6 +37,14 @@ function metricWidgets(
   const measured = m?.measuredPosts ?? 0;
   const known = status === 'unknown' ? null : `${posts(measured)} with a known count`;
   const nothingToCompute = status === 'complete' && measured === 0;
+  // "3 of 50 posts read had a known like count": how much of the read the number rests on.
+  const postsRead = analytics && analytics.activity.status !== 'unknown' ? analytics.activity.postCount : null;
+  const coverage =
+    !analytics || nothingToCompute
+      ? null
+      : postsRead !== null
+        ? `${formatCount(measured)} of ${posts(postsRead)} read had a known ${kind.counter}`
+        : `${posts(measured)} had a known ${kind.counter}`;
 
   return [
     metricWidget({
@@ -46,7 +54,7 @@ function metricWidgets(
       format: 'integer',
       countCanOnlyGrow: true,
       reason,
-      detail: known && !nothingToCompute ? `Over ${known}` : null,
+      detail: coverage,
     }),
     metricWidget({
       id: `engagement.${kind.id}.average`,

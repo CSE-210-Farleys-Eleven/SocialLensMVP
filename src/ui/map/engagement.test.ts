@@ -49,7 +49,27 @@ describe('engagementSections', () => {
     expect(m['engagement.likes.total']!.valueText).toBe('312');
     expect(m['engagement.likes.average']!.valueText).toBe((312 / a.engagement.likeCount.measuredPosts).toFixed(1));
     expect(m['engagement.likes.average']!.detail).toBe(`312 likes ÷ ${a.engagement.likeCount.measuredPosts} posts with a known count`);
-    expect(m['engagement.likes.total']!.detail).toBe(`Over ${a.engagement.likeCount.measuredPosts} posts with a known count`);
+    expect(m['engagement.likes.total']!.detail).toBe(
+      `${a.engagement.likeCount.measuredPosts} of ${a.activity.postCount} posts read had a known like count`,
+    );
+  });
+
+  it('shows how many of the posts read had a known count, also when some were missing', () => {
+    const a = withLikes({ status: 'partial', total: 9, average: 3, measuredPosts: 3 }, false);
+    const m = metrics(engagementSections({ ...a, activity: { ...a.activity, postCount: 50 } }));
+    expect(m['engagement.likes.total']!.detail).toBe('3 of 50 posts read had a known like count');
+  });
+
+  it('an unknown counter still says how many posts were read', () => {
+    const a = sample('partial');
+    const m = metrics(engagementSections(a));
+    expect(m['engagement.quotes.total']!.detail).toBe(`0 of ${a.activity.postCount!.toLocaleString('en-US')} posts read had a known quote count`);
+  });
+
+  it('without a known post total it states only the measured posts', () => {
+    const a = withLikes({ status: 'partial', total: 2, average: 2, measuredPosts: 1 }, false);
+    const m = metrics(engagementSections({ ...a, activity: { ...a.activity, status: 'unknown', postCount: null } }));
+    expect(m['engagement.likes.total']!.detail).toBe('1 post had a known like count');
   });
 
   it('PR #20 example: one measured zero + one missing -> partial, total "At least 0", average 0.0 over 1 post', () => {
