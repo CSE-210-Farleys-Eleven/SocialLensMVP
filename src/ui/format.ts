@@ -28,6 +28,15 @@ function fixed(n: number, decimals: 0 | 1): string {
   return sign + group(int) + (frac === undefined ? '' : `.${frac}`);
 }
 
+/** "2026-11-10 20:30 UTC", or "Unknown" for null or unparseable input. Always UTC. */
+export function formatUtcDateTime(iso: string | null): string {
+  if (iso === null) return UNKNOWN_TEXT;
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return UNKNOWN_TEXT;
+  const s = new Date(ms).toISOString();
+  return `${s.slice(0, 10)} ${s.slice(11, 16)} UTC`;
+}
+
 /** "1,234": a known count inside a sentence. */
 export function formatCount(n: number): string {
   return fixed(n, 0);
