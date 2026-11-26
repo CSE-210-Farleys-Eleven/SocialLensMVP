@@ -4,6 +4,18 @@ const postCollection = 'app.bsky.feed.post';
 const zonedTimestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i;
 const millisecondsPerDay = 86_400_000;
 
+function parsePublicationTime(value: string | null): number {
+  if (value === null || !zonedTimestamp.test(value)) return NaN;
+
+  // Date.parse can roll an impossible local calendar date into the following month.
+  const calendarDate = value.slice(0, 10);
+  const midnight = new Date(`${calendarDate}T00:00:00Z`);
+  if (!Number.isFinite(midnight.getTime()) || midnight.toISOString().slice(0, 10) !== calendarDate) {
+    return NaN;
+  }
+  return Date.parse(value);
+}
+
 function confirmsCount(entries: AnalyticsInput['coverage'], count: number): boolean {
   return entries.length > 0 && entries.every(entry => entry.complete && entry.fetched === count);
 }
@@ -53,9 +65,7 @@ export function analyze(input: AnalyticsInput): AnalyticsResult {
     if (post.isReply === true) replies++;
     if (post.isReply === false) originals++;
 
-    const timestamp = post.createdAt !== null && zonedTimestamp.test(post.createdAt)
-      ? Date.parse(post.createdAt)
-      : NaN;
+    const timestamp = parsePublicationTime(post.createdAt);
     if (!Number.isFinite(timestamp)) {
       undatedPosts++;
       continue;

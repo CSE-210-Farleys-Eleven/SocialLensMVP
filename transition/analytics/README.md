@@ -25,7 +25,7 @@ Analytics takes the normalized rows as given. The normalizer handles post identi
 | `activity.status` | Completeness of the post count. |
 | `activity.postCount` | Observed post count including replies, or `null` when coverage cannot establish a count and there are no observed posts. |
 | `activity.originals`, `activity.replies`, `activity.unknownReplyStatus` | Counts of observed posts with each reply classification. |
-| `activity.undatedPosts` | Observed posts without a usable publication time. They still contribute to the post count, reply classification and any measured engagement. |
+| `activity.undatedPosts` | Observed posts without a usable publication time, including invalid calendar dates. They still contribute to the post count, reply classification and any measured engagement. |
 | `activity.byUtcDay` | Publication counts in ascending UTC date order, each with `date` (`YYYY-MM-DD`) and `postCount`. Only days with at least one dated post appear. |
 | `engagement.likeCount`, `engagement.replyCount`, `engagement.repostCount`, `engagement.quoteCount` | Each metric returns `status`, `total`, `average` and `measuredPosts`. Totals and averages are computed independently for each metric across posts with a known value, including replies. |
 | `coverage.posts`, `coverage.engagement` | Copies of the corresponding `app.bsky.feed.post` and `engagement` coverage entries, including source, completeness and any reason. Consumers can identify synthetic coverage by `source: 'fixtures'`. |
@@ -40,6 +40,8 @@ Analytics takes the normalized rows as given. The normalizer handles post identi
 
 When post coverage confirms an empty collection and engagement coverage confirms a complete zero, each engagement metric has a total of `0`, an average of `null` and `0` measured posts. Otherwise, when values are available, the average uses `measuredPosts` as its denominator. For example, with one measured zero and one missing value, the metric is partial and the average is zero across one measured post.
 
+Incomplete post coverage, incomplete engagement coverage, and missing per-post values can each make a metric partial. Use both coverage lists and the number of posts with a known value when explaining why a metric is partial.
+
 To distinguish a confirmed empty collection from an omitted collection, request `app.bsky.feed.post` explicitly when fetching the snapshot. The reply and undated counts always describe observed rows. The UI should show the activity status alongside these counts and the timeline.
 
-The activity timeline groups observed posts by publication day. Engagement figures describe the collection snapshot at `fetchedAt`. They provide no timestamps for individual interactions.
+The activity timeline groups observed posts by publication day. A missing day can be shown as a confirmed zero only when post coverage is complete and `undatedPosts` is zero. Engagement figures describe the collection snapshot at `fetchedAt`. They provide no timestamps for individual interactions.

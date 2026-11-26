@@ -82,6 +82,22 @@ describe('analyze', () => {
     });
   });
 
+  it('keeps invalid calendar dates undated and buckets a valid leap day by its UTC offset', () => {
+    const result = analyze(snapshot([
+      { createdAt: '2026-02-29T12:00:00Z', isReply: false, engagement: null },
+      {
+        createdAt: '2026-04-31T00:30:00+02:00', isReply: true,
+        engagement: { likeCount: 3, replyCount: 0, repostCount: 0, quoteCount: null },
+      },
+      { createdAt: '2024-02-29T23:15:00-02:00', isReply: false, engagement: null },
+    ], [fixtureCoverage(postCollection, 3, true), fixtureCoverage('engagement', 1, false)]));
+
+    expect(result.activity).toMatchObject({
+      status: 'complete', postCount: 3, undatedPosts: 2, byUtcDay: [{ date: '2024-03-01', postCount: 1 }],
+    });
+    expect(result.engagement.likeCount).toEqual({ status: 'partial', total: 3, average: 3, measuredPosts: 1 });
+  });
+
   it('reports confirmed empty totals with no average or measured posts', () => {
     const result = analyze(snapshot([], [fixtureCoverage(postCollection, 0, true), fixtureCoverage('engagement', 0, true)]));
     const emptyMetric = { status: 'complete', total: 0, average: null, measuredPosts: 0 };
