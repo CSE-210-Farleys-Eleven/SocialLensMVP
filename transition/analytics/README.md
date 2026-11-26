@@ -1,6 +1,20 @@
 # Post analytics contract
 
-`analyze(input: AnalyticsInput): AnalyticsResult` computes a plain JSON summary of a normalized Bluesky post snapshot. It runs synchronously in memory without network requests or persistent storage. The [TypeScript contract](../../src/analytics/contract.ts) defines the input and result types.
+`analyze(input: AnalyticsInput): AnalyticsResult` computes a plain JSON summary of a normalized Bluesky post snapshot in memory. The [TypeScript contract](../../src/analytics/contract.ts) defines the input and result types. The calculation performs no network requests and uses no persistent storage.
+
+## Run analytics off the main thread
+
+Build [`src/analytics/worker.ts`](../../src/analytics/worker.ts) as a browser module Worker asset. The app entry point can use [`analyzeInWorker`](../../src/analytics/worker-client.ts) with a factory that creates a fresh Worker for its built URL.
+
+```ts
+const analytics = await analyzeInWorker(
+  normalizedSnapshot,
+  () => new Worker(analyticsWorkerUrl, { type: 'module' }),
+  accountSignal,
+);
+```
+
+The Worker receives the same `AnalyticsInput` and sends back `AnalyticsResult`. The client terminates it when a result arrives, a Worker error occurs, or `accountSignal` is aborted. Abort the pending calculation when the active account changes or signs out. A failed or cancelled run resolves to `null`, which is the UI's unavailable-analysis input. The synchronous `analyze` remains available for tests and other callers.
 
 ## Input
 
